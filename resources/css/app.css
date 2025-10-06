@@ -161,11 +161,93 @@
         }
     }
 
+    @keyframes flicker {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.8;
+        }
+    }
+
+    @keyframes typing {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes badgePulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    @keyframes badgeRotate {
+        from {
+            transform: rotate(0deg) scale(0.8);
+            opacity: 0;
+        }
+        to {
+            transform: rotate(360deg) scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes gradientShift {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
     .animate-scan {
         animation: scan 8s linear infinite;
     }
 
     .animate-fadeIn {
         animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    .animate-flicker {
+        animation: flicker 2s ease-in-out infinite;
+    }
+
+    .animate-typing {
+        animation: typing 0.3s ease-out forwards;
+    }
+
+    .animate-badge-pulse {
+        animation: badgePulse 2s ease-in-out infinite;
+    }
+
+    .animate-badge-rotate {
+        animation: badgeRotate 0.8s ease-out forwards;
+    }
+
+    .animate-gradient {
+        background-size: 200% 200%;
+        animation: gradientShift 8s ease infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-scan,
+        .animate-flicker,
+        .animate-badge-pulse,
+        .animate-gradient {
+            animation: none;
+        }
     }
 }
