@@ -1,12 +1,17 @@
 import { Head } from '@inertiajs/react';
-import { Shield } from 'lucide-react';
+import { Shield, Lock, CheckCircle, Sparkles, Zap, Eye, Radio } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function SecretMission() {
-    const [countdown, setCountdown] = useState(10);
-    const [isLoading, setIsLoading] = useState(true);
+    const [passwordScreen, setPasswordScreen] = useState(true);
+    const [password, setPassword] = useState('');
+    const [isShaking, setIsShaking] = useState(false);
+    const [isUnlocking, setIsUnlocking] = useState(false);
+    const [showMission, setShowMission] = useState(false);
     const [matrixColumns, setMatrixColumns] = useState<number[]>([]);
     const [isMobile, setIsMobile] = useState(false);
+    const [scanProgress, setScanProgress] = useState(0);
+    const [radarAngle, setRadarAngle] = useState(0);
 
     useEffect(() => {
         // Detect mobile
@@ -16,207 +21,413 @@ export default function SecretMission() {
         checkMobile();
         window.addEventListener('resize', checkMobile);
 
-        // Generate random columns for Matrix effect (fewer on mobile)
-        const columnCount = window.innerWidth < 768 ? 30 : 50;
+        // Generate random columns for Matrix effect
+        const columnCount = window.innerWidth < 768 ? 25 : 40;
         const columns = Array.from({ length: columnCount }, (_, i) => i);
         setMatrixColumns(columns);
 
-        return () => window.removeEventListener('resize', checkMobile);
+        // Radar animation
+        const radarInterval = setInterval(() => {
+            setRadarAngle((prev) => (prev + 2) % 360);
+        }, 30);
+
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+            clearInterval(radarInterval);
+        };
     }, []);
 
-    useEffect(() => {
-        // Countdown timer
-        if (countdown > 0 && isLoading) {
-            const timer = setTimeout(() => {
-                setCountdown(countdown - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0) {
-            setTimeout(() => {
-                setIsLoading(false);
-                // Haptic feedback on mobile
-                if ('vibrate' in navigator) {
-                    navigator.vibrate(100);
+    const handlePasswordSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (password.toUpperCase() === 'JESUS') {
+            setIsUnlocking(true);
+            
+            // Haptic feedback
+            if ('vibrate' in navigator) {
+                navigator.vibrate([100, 50, 100, 50, 200]);
+            }
+            
+            // Play success sound
+            playSuccessSound();
+            
+            // Scan progress animation
+            let progress = 0;
+            const scanInterval = setInterval(() => {
+                progress += 5;
+                setScanProgress(progress);
+                if (progress >= 100) {
+                    clearInterval(scanInterval);
                 }
-                // Optional: Play success sound
-                playSuccessSound();
-            }, 500);
+            }, 30);
+            
+            setTimeout(() => {
+                setPasswordScreen(false);
+                setTimeout(() => {
+                    setShowMission(true);
+                }, 400);
+            }, 2500);
+        } else {
+            setIsShaking(true);
+            
+            // Haptic feedback for error
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            setTimeout(() => {
+                setIsShaking(false);
+                setPassword('');
+            }, 600);
         }
-    }, [countdown, isLoading]);
+    };
 
     const playSuccessSound = () => {
         try {
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            
+            // Create a more complex success sound
+            const playTone = (freq: number, startTime: number, duration: number) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
 
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+                oscillator.frequency.value = freq;
+                oscillator.type = 'sine';
 
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.2, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
 
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
+            };
+
+            const now = audioContext.currentTime;
+            playTone(600, now, 0.15);
+            playTone(800, now + 0.15, 0.15);
+            playTone(1000, now + 0.3, 0.3);
         } catch (e) {
-            // Silently fail if audio not supported
+            // Silently fail
         }
-    };
-
-    const shareOnWhatsApp = () => {
-        const message = encodeURIComponent(
-            '🕵️ Acabei de me tornar um AGENTE DO REINO! 🎯\n\n' +
-            'A minha missão não é secreta - é divulgar o Evangelho a todos!\n\n' +
-            '"Portanto, ide e fazei discípulos de todas as nações..." - Mateus 28:19-20\n\n' +
-            'Junta-te a mim nesta missão! 🙏'
-        );
-        window.open(`https://wa.me/?text=${message}`, '_blank');
     };
 
     return (
         <>
-            <Head title="Missão Secreta" />
-            <div className="relative min-h-dvh w-full overflow-hidden bg-black">
-                {/* Gradient Background Layer */}
-                <div className="pointer-events-none absolute inset-0 animate-gradient bg-gradient-to-br from-green-950/20 via-black to-green-900/10" />
+            <Head title="Missão Classificada - Agente do Reino" />
+            <div className="relative min-h-dvh w-full overflow-hidden bg-gradient-to-br from-slate-950 via-green-950/30 to-black">
+                {/* Animated Grid Background */}
+                <div className="pointer-events-none absolute inset-0 opacity-20">
+                    <div className="h-full w-full" style={{
+                        backgroundImage: 'linear-gradient(rgba(34, 197, 94, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 197, 94, 0.15) 1px, transparent 1px)',
+                        backgroundSize: '50px 50px',
+                        animation: 'grid-move 20s linear infinite',
+                    }} />
+                </div>
 
-                {/* Matrix Rain Effect */}
-                <div className="absolute inset-0 overflow-hidden opacity-20">
+                {/* Matrix Rain Effect - Subtle */}
+                <div className="absolute inset-0 overflow-hidden opacity-10">
                     {matrixColumns.map((col) => (
                         <MatrixColumn key={col} index={col} isMobile={isMobile} />
                     ))}
                 </div>
 
+                {/* Radar Sweep Effect */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-5">
+                    <div className="relative h-96 w-96">
+                        <div className="absolute inset-0 rounded-full border border-green-500/30" />
+                        <div className="absolute inset-4 rounded-full border border-green-500/20" />
+                        <div className="absolute inset-8 rounded-full border border-green-500/10" />
+                        <div
+                            className="absolute left-1/2 top-1/2 h-1/2 w-1 origin-bottom bg-gradient-to-t from-green-500/50 to-transparent"
+                            style={{
+                                transform: `translate(-50%, -100%) rotate(${radarAngle}deg)`,
+                            }}
+                        />
+                    </div>
+                </div>
+
                 {/* Scanlines Effect */}
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-green-500/5 to-transparent animate-scan" />
 
+                {/* Vignette */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-radial from-transparent via-transparent to-black/70" />
+
                 {/* Main Content */}
-                <div className="relative z-10 flex min-h-dvh items-center justify-center px-6 py-8">
-                    {isLoading ? (
-                        <div className="w-full max-w-md text-center">
-                            {/* Loading Screen */}
-                            <div className="mb-8 flex flex-col gap-4">
-                                <div className="relative">
-                                    <div className="absolute -inset-4 animate-pulse rounded-full bg-green-500/20 blur-xl" />
-                                    <h1 className="relative text-6xl font-bold tracking-wider text-green-400 drop-shadow-[0_0_25px_rgba(34,197,94,0.5)] sm:text-7xl md:text-8xl">
-                                        {countdown}
-                                    </h1>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <p className="animate-pulse font-mono text-xl font-semibold tracking-widest text-green-300 sm:text-2xl md:text-4xl">
-                                        A CARREGAR A TUA MISSÃO
-                                    </p>
-                                    <div className="mx-auto flex w-full max-w-xs justify-center gap-1">
-                                        {[...Array(10)].map((_, i) => (
-                                            <div
-                                                key={i}
-                                                className="h-2 w-full rounded-full bg-green-900 transition-all duration-300"
-                                                style={{
-                                                    backgroundColor:
-                                                        i < (10 - countdown)
-                                                            ? 'rgb(34, 197, 94)'
-                                                            : 'rgb(20, 83, 45)',
-                                                }}
-                                            />
-                                        ))}
+                <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
+                    {passwordScreen ? (
+                        <div className={`w-full max-w-lg transition-all duration-700 ${isUnlocking ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
+                            {/* Password Screen */}
+                            <div className="animate-fadeIn flex flex-col gap-6 text-center">
+                                {/* FBI-Style Header */}
+                                <div className="mb-4 space-y-2">
+                                    <div className="flex items-center justify-center gap-2 font-mono text-xs text-green-400/60 sm:text-sm">
+                                        <Radio className="h-4 w-4 animate-pulse" />
+                                        <span>SISTEMA DE AUTENTICAÇÃO ATIVO</span>
+                                        <Radio className="h-4 w-4 animate-pulse" />
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Random Code Snippets */}
-                            <div className="mt-12 flex flex-col gap-2 font-mono text-xs text-green-500/60 sm:text-sm">
-                                <TerminalLine text="[SISTEMA] A inicializar protocolo de segurança..." delay={0} />
-                                <TerminalLine text="[ACESSO] A verificar credenciais... OK" delay={1000} />
-                                <TerminalLine text="[CRYPTO] A desencriptar ficheiros... 87%" delay={2000} />
-                                <TerminalLine text="[REDE] A estabelecer ligação segura... SUCESSO" delay={3500} />
-                                <TerminalLine text="[DATABASE] A carregar perfil do agente... COMPLETO" delay={5000} />
-                                <TerminalLine text="[MISSÃO] A preparar briefing... PRONTO" delay={7000} />
+                                {/* Lock Icon with Radar */}
+                                <div className="relative mx-auto mb-6">
+                                    {/* Outer Radar Rings */}
+                                    <div className="absolute -inset-12 animate-ping rounded-full border-2 border-green-500/20" style={{ animationDuration: '3s' }} />
+                                    <div className="absolute -inset-8 animate-ping rounded-full border-2 border-green-500/30" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                                    
+                                    {/* Main Badge */}
+                                    <div className="relative flex h-36 w-36 items-center justify-center rounded-full border-4 border-green-400 bg-gradient-to-br from-green-950/80 to-slate-950/80 shadow-[0_0_60px_rgba(34,197,94,0.4)] backdrop-blur-sm sm:h-40 sm:w-40">
+                                        {/* Inner Glow */}
+                                        <div className="absolute inset-2 rounded-full bg-green-500/10 blur-xl" />
+                                        
+                                        {isUnlocking ? (
+                                            <>
+                                                <CheckCircle className="relative z-10 h-20 w-20 text-green-400 animate-badge-pulse sm:h-24 sm:w-24" strokeWidth={2} />
+                                                <div className="absolute inset-0 animate-spin-slow rounded-full border-t-4 border-green-400" />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Lock className="relative z-10 h-20 w-20 text-green-400 sm:h-24 sm:w-24" strokeWidth={2} />
+                                                <Eye className="absolute right-2 top-2 h-6 w-6 text-green-400/60 animate-pulse" />
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Orbiting Dots */}
+                                    <div className="absolute inset-0 animate-spin-slow">
+                                        <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
+                                    </div>
+                                    <div className="absolute inset-0 animate-spin-reverse">
+                                        <div className="absolute bottom-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                                    </div>
+                                </div>
+
+                                {/* Title */}
+                                <div className="space-y-3">
+                                    <h1 className="font-mono text-3xl font-bold tracking-wider text-green-400 drop-shadow-[0_0_30px_rgba(34,197,94,0.6)] sm:text-4xl md:text-5xl">
+                                        ACESSO RESTRITO
+                                    </h1>
+                                    <div className="flex items-center justify-center gap-2 font-mono text-xs text-green-300/70 sm:text-sm">
+                                        <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
+                                        <span>NÍVEL DE SEGURANÇA: MÁXIMO</span>
+                                        <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
+                                    </div>
+                                </div>
+
+                                {/* Password Form */}
+                                <form onSubmit={handlePasswordSubmit} className="space-y-5">
+                                    <div className="relative overflow-hidden rounded-xl border-2 border-green-400/40 bg-gradient-to-br from-green-950/40 to-slate-950/60 p-6 shadow-[inset_0_0_30px_rgba(0,0,0,0.5)] backdrop-blur-sm sm:p-8">
+                                        {/* Corner Brackets */}
+                                        <div className="pointer-events-none absolute left-2 top-2 h-4 w-4 border-l-2 border-t-2 border-green-400/60" />
+                                        <div className="pointer-events-none absolute right-2 top-2 h-4 w-4 border-r-2 border-t-2 border-green-400/60" />
+                                        <div className="pointer-events-none absolute bottom-2 left-2 h-4 w-4 border-b-2 border-l-2 border-green-400/60" />
+                                        <div className="pointer-events-none absolute bottom-2 right-2 h-4 w-4 border-b-2 border-r-2 border-green-400/60" />
+
+                                        <label className="mb-5 block text-center font-mono text-lg font-semibold text-green-300 sm:text-xl">
+                                            Qual é o nome do comandante?
+                                        </label>
+                                        
+                                        <input
+                                            type="text"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className={`w-full rounded-lg border-2 bg-black/60 px-4 py-4 text-center font-mono text-2xl font-bold uppercase tracking-[0.3em] text-green-400 placeholder-green-800/50 shadow-inner outline-none transition-all focus:border-green-400 focus:shadow-[0_0_30px_rgba(34,197,94,0.3)] sm:text-3xl ${
+                                                isShaking ? 'animate-shake border-red-500' : 'border-green-500/50'
+                                            }`}
+                                            placeholder="_ _ _ _ _"
+                                            autoFocus
+                                            disabled={isUnlocking}
+                                            maxLength={10}
+                                        />
+
+                                        {isShaking && (
+                                            <div className="mt-3 flex items-center justify-center gap-2 text-center font-mono text-sm text-red-400 animate-fadeIn">
+                                                <Zap className="h-4 w-4" />
+                                                <span>ACESSO NEGADO - CÓDIGO INVÁLIDO</span>
+                                                <Zap className="h-4 w-4" />
+                                            </div>
+                                        )}
+
+                                        {isUnlocking && (
+                                            <div className="mt-4 space-y-2">
+                                                <div className="flex items-center justify-center gap-2 font-mono text-sm text-green-400">
+                                                    <div className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
+                                                    <span>A VERIFICAR IDENTIDADE...</span>
+                                                </div>
+                                                <div className="h-2 w-full overflow-hidden rounded-full bg-green-950/50">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_10px_rgba(34,197,94,0.6)] transition-all duration-300"
+                                                        style={{ width: `${scanProgress}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={isUnlocking || password.length === 0}
+                                        className="group relative w-full overflow-hidden rounded-lg border-2 border-green-500/50 bg-gradient-to-r from-green-950/60 to-green-900/40 px-6 py-4 font-mono text-lg font-bold uppercase tracking-widest text-green-400 shadow-lg transition-all hover:border-green-400 hover:shadow-[0_0_40px_rgba(34,197,94,0.4)] active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed sm:text-xl"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/20 to-green-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <span className="relative flex items-center justify-center gap-2">
+                                            {isUnlocking ? (
+                                                <>
+                                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-400 border-t-transparent" />
+                                                    A DESBLOQUEAR...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Shield className="h-5 w-5" />
+                                                    CONFIRMAR ACESSO
+                                                </>
+                                            )}
+                                        </span>
+                                    </button>
+                                </form>
+
+                                {/* Status Lines */}
+                                <div className="mt-6 space-y-1.5 rounded-lg border border-green-500/20 bg-black/30 p-4 font-mono text-xs text-green-400/60 backdrop-blur-sm sm:text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <span>[SISTEMA]</span>
+                                        <span className="text-green-400">OPERACIONAL</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>[PROTOCOLO]</span>
+                                        <span className="text-yellow-400">AGUARDANDO</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>[ENCRIPTAÇÃO]</span>
+                                        <span className="text-green-400">AES-256</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="w-full max-w-2xl text-center">
-                            {/* Success Screen */}
-                            <div className="animate-fadeIn flex flex-col gap-6 sm:gap-8">
-                                {/* Badge/Shield Icon */}
-                                <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full border-4 border-green-400 bg-green-950/50 shadow-[0_0_50px_rgba(34,197,94,0.5)] animate-badge-rotate sm:h-32 sm:w-32">
-                                    <Shield className="h-14 w-14 text-green-400 animate-badge-pulse sm:h-16 sm:w-16" strokeWidth={2.5} />
+                        <div className={`w-full max-w-4xl transition-all duration-1000 ${showMission ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
+                            {/* Mission Screen */}
+                            <div className="animate-fadeIn flex flex-col items-center gap-6 text-center sm:gap-8">
+                                {/* Badge with Image Stamp */}
+                                <div className="relative mb-4">
+                                    {/* Outer Glow */}
+                                    <div className="absolute -inset-12 animate-pulse rounded-full bg-green-500/20 blur-3xl" style={{ animationDuration: '3s' }} />
+                                    
+                                    {/* Main Badge */}
+                                    <div className="relative flex h-40 w-40 items-center justify-center rounded-full border-4 border-green-400 bg-gradient-to-br from-green-950/80 to-slate-950/80 shadow-[0_0_80px_rgba(34,197,94,0.6)] backdrop-blur-sm sm:h-48 sm:w-48">
+                                        <img 
+                                            src="/IMG_3796.PNG" 
+                                            alt="Agentes do Reino" 
+                                            className="h-32 w-32 object-contain sm:h-40 sm:w-40 animate-badge-pulse"
+                                        />
+                                    </div>
+
+                                    {/* Sparkles */}
+                                    <Sparkles className="absolute -right-4 -top-4 h-10 w-10 text-yellow-400 animate-ping" style={{ animationDuration: '2s' }} />
+                                    <Sparkles className="absolute -left-4 -bottom-4 h-8 w-8 text-yellow-400 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                                    <Sparkles className="absolute -right-2 -bottom-2 h-6 w-6 text-green-400 animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
                                 </div>
 
-                                {/* Main Message with Frame */}
-                                <div className="rounded-xl border border-green-500/40 bg-green-950/20 p-6 shadow-[inset_0_0_20px_rgba(34,197,94,0.1)] backdrop-blur-sm sm:p-8">
-                                    <div className="flex flex-col gap-3 sm:gap-4">
-                                        <h1 className="font-mono text-3xl font-bold tracking-wider text-green-400 drop-shadow-[0_0_25px_rgba(34,197,94,0.5)] sm:text-4xl md:text-6xl">
-                                            PARABÉNS
+                                {/* Main Message */}
+                                <div className="relative w-full overflow-hidden rounded-2xl border-2 border-green-500/50 bg-gradient-to-br from-green-950/50 via-slate-950/60 to-green-900/30 p-8 shadow-[inset_0_0_40px_rgba(0,0,0,0.5),0_0_60px_rgba(34,197,94,0.3)] backdrop-blur-md sm:p-10 md:p-12">
+                                    {/* Corner Brackets - Larger */}
+                                    <div className="pointer-events-none absolute left-3 top-3 h-8 w-8 border-l-2 border-t-2 border-green-400" />
+                                    <div className="pointer-events-none absolute right-3 top-3 h-8 w-8 border-r-2 border-t-2 border-green-400" />
+                                    <div className="pointer-events-none absolute bottom-3 left-3 h-8 w-8 border-b-2 border-l-2 border-green-400" />
+                                    <div className="pointer-events-none absolute bottom-3 right-3 h-8 w-8 border-b-2 border-r-2 border-green-400" />
+
+                                    {/* Animated Border Glow */}
+                                    <div className="absolute -inset-px animate-pulse rounded-2xl bg-gradient-to-r from-green-500/0 via-green-500/50 to-green-500/0 opacity-50" style={{ animationDuration: '3s' }} />
+
+                                    <div className="relative space-y-5">
+                                        <h1 className="animate-text-glow font-mono text-4xl font-bold tracking-wider text-green-400 drop-shadow-[0_0_30px_rgba(34,197,94,0.6)] sm:text-5xl md:text-6xl lg:text-7xl">
+                                            PARABÉNS!
                                         </h1>
-                                        <p className="font-mono text-xl font-semibold tracking-wide text-green-300 sm:text-2xl md:text-3xl">
-                                            AGORA ÉS UM
-                                        </p>
-                                        <h2 className="font-mono text-4xl font-bold tracking-widest text-green-400 drop-shadow-[0_0_30px_rgba(34,197,94,0.6)] sm:text-5xl md:text-6xl">
-                                            AGENTE DO REINO
-                                        </h2>
-                                    </div>
-                                </div>
-
-                                {/* Mission Message */}
-                                <div className="flex flex-col gap-4 sm:gap-6">
-                                    <div className="rounded-lg border-2 border-green-400/50 bg-green-950/40 p-5 backdrop-blur-sm sm:p-6">
-                                        <p className="font-mono text-lg font-bold uppercase tracking-wide text-green-300 sm:text-xl md:text-2xl">
-                                            ⚠️ A TUA MISSÃO NÃO É SECRETA
-                                        </p>
-                                        <p className="mt-2 font-mono text-base font-semibold uppercase tracking-wider text-green-400 sm:mt-3 sm:text-lg md:text-xl">
-                                            DIVULGA A TODOS!
-                                        </p>
-                                    </div>
-
-                                    {/* CTA Button */}
-                                    {/* <button
-                                        onClick={shareOnWhatsApp}
-                                        className="group mx-auto inline-flex items-center gap-2 rounded-lg border border-green-500/40 bg-green-950/40 px-6 py-3 font-mono text-sm uppercase tracking-widest text-green-400 transition-all hover:border-green-400 hover:bg-green-900/40 hover:shadow-[0_0_20px_rgba(34,197,94,0.3)] active:scale-95 sm:text-base"
-                                    >
-                                        <svg className="h-5 w-5 transition-transform group-hover:scale-110" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                                        </svg>
-                                        Partilhar Missão
-                                    </button> */}
-
-                                    {/* Bible Verse */}
-                                    <div className="rounded-lg border border-green-500/30 bg-green-950/30 p-6 backdrop-blur-sm sm:p-8">
-                                        <div className="flex flex-col gap-3 sm:gap-4">
-                                            <p className="font-mono text-base font-bold uppercase tracking-wide text-green-400 sm:text-lg md:text-xl">
-                                                A Tua Missão É:
+                                        <div className="space-y-3">
+                                            <p className="font-sans text-xl font-medium text-green-200 sm:text-2xl md:text-3xl">
+                                                Agora és um
                                             </p>
-                                            <blockquote className="relative text-base italic leading-relaxed text-green-200 sm:text-lg md:text-xl">
-                                                <span className="absolute -left-2 top-0 text-3xl text-green-500/50">"</span>
-                                                Portanto, ide e fazei discípulos de todas as nações, batizando-os em nome do Pai, do Filho e do Espírito Santo, ensinando-os a guardar todas as coisas que vos tenho ordenado. E eis que estou convosco todos os dias até à consumação do século.
-                                                <span className="text-3xl text-green-500/50">"</span>
-                                            </blockquote>
-                                            <p className="text-right text-xs font-semibold tracking-wider text-green-400 sm:text-sm md:text-base">
-                                                — MATEUS 28:19-20
-                                            </p>
+                                            <h2 className="animate-text-glow font-mono text-4xl font-bold tracking-widest text-green-400 drop-shadow-[0_0_35px_rgba(34,197,94,0.7)] sm:text-5xl md:text-6xl lg:text-7xl">
+                                                AGENTE DO REINO
+                                            </h2>
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Mission Statement */}
+                                <div className="group relative w-full overflow-hidden rounded-2xl border-2 border-yellow-500/50 bg-gradient-to-br from-yellow-950/30 via-slate-950/60 to-yellow-900/20 p-8 shadow-[0_0_50px_rgba(234,179,8,0.2)] backdrop-blur-md transition-all hover:shadow-[0_0_70px_rgba(234,179,8,0.3)] sm:p-10">
+                                    <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    
+                                    <div className="relative space-y-4">
+                                        <div className="flex items-center justify-center gap-3 font-mono text-xl font-bold uppercase tracking-wide text-yellow-400 sm:text-2xl md:text-3xl">
+                                            <span className="text-2xl sm:text-3xl">⚠️</span>
+                                            <span>A tua missão não é secreta:</span>
+                                            <span className="text-2xl sm:text-3xl">⚠️</span>
+                                        </div>
+                                        <p className="text-2xl font-bold leading-relaxed text-white sm:text-3xl md:text-4xl lg:text-5xl">
+                                            Viver e anunciar o amor de{' '}
+                                            <span className="relative inline-block">
+                                                <span className="relative z-10 text-yellow-300 drop-shadow-[0_0_25px_rgba(253,224,71,1)]">
+                                                    Jesus
+                                                </span>
+                                                <span className="absolute inset-0 animate-pulse bg-yellow-300/40 blur-xl" />
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Bible Verse */}
+                                <div className="w-full rounded-2xl border border-green-500/40 bg-gradient-to-br from-green-950/30 to-black/60 p-8 backdrop-blur-sm sm:p-10">
+                                    <div className="space-y-5">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="h-1 w-8 bg-gradient-to-r from-transparent to-green-400" />
+                                            <p className="font-mono text-base font-bold uppercase tracking-wide text-green-400 sm:text-lg">
+                                                Versículo da Missão
+                                            </p>
+                                            <div className="h-1 w-8 bg-gradient-to-l from-transparent to-green-400" />
+                                        </div>
+                                        
+                                        <blockquote className="border-l-4 border-green-500/50 pl-6 text-lg italic leading-relaxed text-green-100 sm:text-xl md:text-2xl">
+                                            "Portanto, ide e fazei discípulos de todas as nações, batizando-os em nome do Pai, do Filho e do Espírito Santo, ensinando-os a guardar todas as coisas que vos tenho ordenado. E eis que estou convosco todos os dias até à consumação do século."
+                                        </blockquote>
+                                        
+                                        <p className="text-right text-sm font-semibold tracking-wider text-green-400 sm:text-base md:text-lg">
+                                            — MATEUS 28:19-20
+                                        </p>
+                                    </div>
+                                </div>
+
                                 {/* Mission Status */}
-                                <div className="mt-4 flex flex-col gap-2 font-mono text-xs text-green-500 sm:text-sm">
-                                    <StatusLine text="[STATUS] AGENTE ACTIVADO" delay={200} />
-                                    <StatusLine text="[AUTORIZAÇÃO] NÍVEL MÁXIMO" delay={400} />
-                                    <StatusLine text="[MISSÃO] EM CURSO" delay={600} />
+                                <div className="w-full rounded-xl border border-green-500/30 bg-black/40 p-6 backdrop-blur-sm">
+                                    <div className="grid gap-3 font-mono text-sm text-green-400 sm:text-base">
+                                        <StatusLine text="[STATUS] ✓ AGENTE ACTIVADO" delay={300} />
+                                        <StatusLine text="[AUTORIZAÇÃO] ✓ NÍVEL MÁXIMO CONCEDIDO" delay={600} />
+                                        <StatusLine text="[MISSÃO] ✓ EM CURSO - DIVULGAR O EVANGELHO" delay={900} />
+                                        <StatusLine text="[COMANDANTE] ✓ JESUS CRISTO" delay={1200} />
+                                    </div>
+                                </div>
+
+                                {/* Final Blessing */}
+                                <div className="mt-4">
+                                    <p className="animate-pulse font-sans text-xl font-semibold text-green-300 sm:text-2xl">
+                                        Que o Senhor te abençoe nesta jornada! 🙏
+                                    </p>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* Corner Decorations */}
-                <div className="pointer-events-none absolute left-3 top-3 font-mono text-[10px] text-green-500/50 sm:left-4 sm:top-4 sm:text-xs">
-                    [CLASSIFICADO]
+                {/* Corner Decorations - Updated */}
+                <div className="pointer-events-none absolute left-3 top-3 space-y-1 font-mono text-[10px] text-green-500/50 sm:left-4 sm:top-4 sm:text-xs">
+                    <div>[SISTEMA ADR]</div>
+                    <div className="flex items-center gap-1">
+                        <div className="h-1 w-1 rounded-full bg-green-400 animate-pulse" />
+                        <span>ONLINE</span>
+                    </div>
                 </div>
-                <div className="pointer-events-none absolute right-3 top-3 font-mono text-[10px] text-green-500/50 sm:right-4 sm:top-4 sm:text-xs">
-                    [ULTRA SECRETO]
+                <div className="pointer-events-none absolute right-3 top-3 text-right font-mono text-[10px] text-green-500/50 sm:right-4 sm:top-4 sm:text-xs">
+                    <div>[MISSÃO PÚBLICA]</div>
+                    <div>[NÃO SECRETO]</div>
                 </div>
                 <div className="pointer-events-none absolute bottom-3 left-3 font-mono text-[10px] text-green-500/50 sm:bottom-4 sm:left-4 sm:text-xs">
                     [LIGAÇÃO SEGURA]
@@ -225,26 +436,136 @@ export default function SecretMission() {
                     [ENCRIPTADO]
                 </div>
             </div>
+
+            <style>{`
+                @keyframes float {
+                    0%, 100% {
+                        transform: translateY(0) translateX(0);
+                        opacity: 0.4;
+                    }
+                    50% {
+                        transform: translateY(-20px) translateX(10px);
+                        opacity: 0.8;
+                    }
+                }
+
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+                    20%, 40%, 60%, 80% { transform: translateX(8px); }
+                }
+
+                @keyframes text-glow {
+                    0%, 100% {
+                        text-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+                    }
+                    50% {
+                        text-shadow: 0 0 50px rgba(34, 197, 94, 0.9), 0 0 80px rgba(34, 197, 94, 0.5);
+                    }
+                }
+
+                @keyframes badge-pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.95; }
+                }
+
+                @keyframes spin-slow {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                @keyframes spin-reverse {
+                    from { transform: rotate(360deg); }
+                    to { transform: rotate(0deg); }
+                }
+
+                @keyframes scan {
+                    0% { transform: translateY(-100%); }
+                    100% { transform: translateY(100%); }
+                }
+
+                @keyframes grid-move {
+                    0% { transform: translate(0, 0); }
+                    100% { transform: translate(50px, 50px); }
+                }
+
+                @keyframes typing {
+                    from { opacity: 0; transform: translateX(-10px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+
+                @keyframes flicker {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.85; }
+                }
+
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                .animate-float {
+                    animation: float linear infinite;
+                }
+
+                .animate-shake {
+                    animation: shake 0.6s cubic-bezier(.36,.07,.19,.97);
+                }
+
+                .animate-text-glow {
+                    animation: text-glow 3s ease-in-out infinite;
+                }
+
+                .animate-badge-pulse {
+                    animation: badge-pulse 2s ease-in-out infinite;
+                }
+
+                .animate-spin-slow {
+                    animation: spin-slow 20s linear infinite;
+                }
+
+                .animate-spin-reverse {
+                    animation: spin-reverse 15s linear infinite;
+                }
+
+                .animate-scan {
+                    animation: scan 10s linear infinite;
+                }
+
+                .animate-typing {
+                    animation: typing 0.4s ease-out;
+                }
+
+                .animate-flicker {
+                    animation: flicker 2s ease-in-out infinite;
+                }
+
+                .animate-fadeIn {
+                    animation: fadeIn 1s ease-out;
+                }
+
+                .bg-gradient-radial {
+                    background: radial-gradient(circle, var(--tw-gradient-stops));
+                }
+            `}</style>
         </>
     );
 }
 
-// Matrix Column Component with Performance Optimization
+// Matrix Column Component
 function MatrixColumn({ index, isMobile }: { index: number; isMobile: boolean }) {
     const [position, setPosition] = useState(-100);
     const [characters, setCharacters] = useState<string[]>([]);
 
     useEffect(() => {
-        // Generate random characters
         const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
-        const randomChars = Array.from({ length: 20 }, () => 
+        const randomChars = Array.from({ length: 15 }, () => 
             chars[Math.floor(Math.random() * chars.length)]
         );
         setCharacters(randomChars);
 
-        // Animate column - slower on mobile for performance
-        const speed = isMobile ? 15 + Math.random() * 20 : 20 + Math.random() * 30;
-        const intervalTime = isMobile ? 60 : 50;
+        const speed = isMobile ? 12 + Math.random() * 15 : 18 + Math.random() * 25;
+        const intervalTime = isMobile ? 70 : 60;
         
         const interval = setInterval(() => {
             setPosition((prev) => {
@@ -260,9 +581,9 @@ function MatrixColumn({ index, isMobile }: { index: number; isMobile: boolean })
 
     return (
         <div
-            className="absolute font-mono text-sm text-green-500"
+            className="absolute font-mono text-xs text-green-500 sm:text-sm"
             style={{
-                left: `${index * 2}%`,
+                left: `${index * 2.5}%`,
                 top: `${position}px`,
                 textShadow: '0 0 5px rgba(34, 197, 94, 0.8)',
                 willChange: 'transform',
@@ -272,7 +593,7 @@ function MatrixColumn({ index, isMobile }: { index: number; isMobile: boolean })
                 <div
                     key={i}
                     style={{
-                        opacity: 1 - i * 0.05,
+                        opacity: 1 - i * 0.06,
                     }}
                 >
                     {char}
@@ -282,23 +603,7 @@ function MatrixColumn({ index, isMobile }: { index: number; isMobile: boolean })
     );
 }
 
-// Terminal Line Component with Typing Effect
-function TerminalLine({ text, delay }: { text: string; delay: number }) {
-    const [visible, setVisible] = useState(false);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setVisible(true);
-        }, delay);
-        return () => clearTimeout(timer);
-    }, [delay]);
-
-    if (!visible) return null;
-
-    return <p className="animate-typing text-left">{text}</p>;
-}
-
-// Status Line Component with Flicker Effect
+// Status Line Component
 function StatusLine({ text, delay }: { text: string; delay: number }) {
     const [visible, setVisible] = useState(false);
 
@@ -311,5 +616,10 @@ function StatusLine({ text, delay }: { text: string; delay: number }) {
 
     if (!visible) return null;
 
-    return <p className="animate-typing animate-flicker">{text}</p>;
+    return (
+        <div className="flex items-center gap-2 animate-typing animate-flicker">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            <p>{text}</p>
+        </div>
+    );
 }
